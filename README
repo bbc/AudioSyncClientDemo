@@ -1,9 +1,38 @@
 AudioSync browser demo
 ======================
 
+"Welcome to our browser-based AudioSync client. It can tell you what radio
+station you're tuned to just by listening to it."
 
-Welcome to our browser-based AudioSync client. It can tell you what radio
-station you're tuned to just by listening to it.
+This is a duplicate of the client application that's hosted at
+http://audiosync.prototype0.net/demos/livesync/
 
-Put your computer near a radio that's tuned to BBC Radio 1, BBC Radio 2, 
-BBC Radio 3 or BBC Radio 4, and press the button on the right to see the demo.
+It's not designed to be used 'as is' because this repository doesn't contain
+the server-side code required to run an AudioSync service. However, we think
+this will be an easier way for people to view the client code.
+
+
+ /javascript/
+**************
+audio_sync.js is something we've written to act as a client to our AudioSync
+web service. To find out how that works, take a look at 
+http://audiosync.prototype0.net/api/
+
+We've used a few 3rd party Javascript libraries:
+   http://jquery.com/  -  for general cool js stuff
+   https://github.com/corbanbrook/dsp.js/  - for FFT in javascript
+   http://raphaeljs.com/  -  for easy vector graphics
+   http://code.google.com/p/swfobject/  -  to easily embed a swf in a page
+  
+
+ /flash/
+*********
+AudioCapture.as (.swf) captures audio from the system's microphone and uses
+ActionScript's ExternalInterface to pass that audio data to Javascript for
+processing. We could have done everything in Flash, but we wanted to experiment
+with what could be done in HTML5 and Javascript in modern browsers.
+
+
+ /css/
+*******
+Some style sheets to make the client look nice.
