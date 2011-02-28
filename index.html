@@ -1,0 +1,291 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
+"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" /> 
+<title>Welcome to AudioSync.</title>
+
+<script type="text/javascript" src="javascript/swfobject.js"></script>
+<script type="text/javascript" src="javascript/jquery.min.js"></script>
+<script type="text/javascript" src="javascript/audio_sync.js"></script>
+<script type="text/javascript" src="javascript/raphael.js"></script>
+<script type="text/javascript" src="javascript/dsp.js"></script>
+<script type="text/javascript">
+
+  var as = new AudioSync();
+  as.logging = true;
+
+  var swfVersionStr = "10.0.0";
+  var flashvars = {};
+  var params = {};
+  params.quality = "high";
+  params.allowscriptaccess = "always";
+  params.allowfullscreen = "true";
+  var attributes = {};
+  attributes.id = "audio_sync";
+  attributes.name = "audio_sync";
+  swfobject.embedSWF(
+    "flash/AudioCapture.swf",
+    "swf",
+    "1", "1",
+    swfVersionStr, '', flashvars, params, attributes);
+
+  $(document).ready(function()
+  {
+
+    var sw = $("#audio_sync")[0];
+    var paper, inner, outer, pulse, label;
+
+    $.ajaxSetup({
+      "error":function() {
+        console.log("Error called");
+        $("#feedback").hide().html('<p class="title message" id="message"><span>Oops, an error occurred. Refresh the page to try again.</span></p>').fadeIn('slow');
+      }
+    });
+
+    $("#feedback").hide().html(
+      '<p>Welcome to our browser-based AudioSync client. It can tell you what radio station you\'re tuned to just by listening to it.</p>' +
+      '<p>You\'ll need the latest version of <a href="http://www.google.com/landing/chrome/beta">Chrome</a> or <a href="http://www.mozilla.com/firefox/beta/">Firefox</a> to use it.</p>' + 
+      '<p>Put your computer near a radio that\'s tuned to <a href="http://www.bbc.co.uk/radio1">BBC Radio 1</a>, <a href="http://www.bbc.co.uk/radio2">BBC Radio 2</a>, <a href="http://www.bbc.co.uk/radio3">BBC Radio 3</a> or <a href="http://www.bbc.co.uk/radio4">BBC Radio 4</a>, and press the button on the right to see the demo.</p>'
+    ).fadeIn('slow');
+
+    function buildProgress() {
+
+      paper = Raphael("paper", 272, 272);
+      paper.customAttributes.segment = function (x, y, r, a1, a2) {
+        var flag = (a2 - a1) > 180,
+        a1 = (a1 % 360) * Math.PI / 180;
+        a2 = (a2 % 360) * Math.PI / 180;
+        return {
+          path: [["M", x, y],
+                 ["l", r * Math.cos(a1), r * Math.sin(a1)],
+                 ["A", r, r, 0, +flag, 1, x + r * Math.cos(a2), y + r * Math.sin(a2)],
+                 ["z"]]
+        };
+      };
+
+      outer = paper.path().attr({
+        segment: [136, 136, 135, -90, -90],
+        stroke: '#5cb8e6',
+        fill: '#5cb8e6'
+      }).hide();
+
+      pulse = paper.path().attr({
+        segment: [136, 136, 110, -90, -90],
+        stroke: '#baddee',
+        fill: '#baddee'
+      }).hide();
+
+      inner = paper.circle(136, 136, 84).attr({
+        fill: '#666666',
+        stroke: 'none'
+      });
+      inner.animate({r: 88}, 1000, "bounce");
+
+      listen_label = paper.text(136, 136, "Listening").attr({
+        "font-family": 'Helvetica',
+        "font-size": 36,
+        "font-weight": "bold",
+        fill: "#fff"
+      });
+
+      match_label = paper.text(136, 136, "Matching").attr({
+        "font-family": 'Helvetica',
+        "font-size": 36,
+        "font-weight": "bold",
+        fill: "#fff"
+      }).hide();
+
+      finished_label = paper.text(136, 136, "Finished").attr({
+        "font-family": 'Helvetica',
+        "font-size": 36,
+        "font-weight": "bold",
+        fill: "#fff"
+      }).hide();
+
+
+      outer.show();
+      outer.do_animate = function() {
+        this.animate({
+          segment: [136, 136, 135, -90, 269],
+          stroke: '#5cb8e6',
+          fill: '#5cb8e6'
+        }, 12000, "<>", function() {
+          paper.circle(136, 136, 135).attr({
+            fill: '#5cb8e6',
+            stroke: 'none'
+          }).toBack();
+        });
+      }
+      outer.do_animate();
+    }
+
+    function init() {
+      $("#content").fadeOut('fast', function() {
+
+        if (sw.isActive == undefined) {
+          sw.width = "272px";
+          sw.height = "272px";
+          $("#feedback").hide().html(
+            "<p>To use livesync, you'll have to allow us access to your microphone by accepting the box on the right.</p><p>The data that's sent to our server only tells us some basic properties of the audio. The sound captured by your microphone is not recorded and will never leave your computer.</p>"
+          ).fadeIn('slow');
+        }
+
+        as.onMicStopped = function() {
+          console.log("onmicstopped");
+        };
+
+        as.onMicStarted = function() {
+          console.log("onmicstarted");
+        };
+
+        as.statusEvent = function(e) {
+          console.log("statusEvent "+e);
+          if (e == 'Microphone.Unmuted') {
+            sw.width = "1px";
+            sw.height = "1px";
+            sw.isActive = true;
+          }
+        };
+
+        as.onMicActivity = function() {
+          console.log("onMicActivity");
+          $("#feedback").hide().html("<p></p>"
+          ).fadeIn('slow');
+          buildProgress();
+        };
+
+        as.onFingerPrintPost = function() {
+          console.log("onFingerPrintPost");
+
+          $("#feedback").hide().html(
+            "<p>Sorry this part is a bit slow. The matching process actually only takes about a second, but we've had to introduce a delay because our server's listening to streams that are about 25 seconds behind FM or DAB radio. We'll fix this in the future.</p>"
+          ).fadeIn('slow');
+
+          listen_label.hide();
+          match_label.show();
+
+          pulse.show();
+          pulse.do_animate = function() {
+            this.animate({
+              segment: [136, 136, 110, -90, 269],
+              fill: '#baddee',
+              stroke: '#baddee'
+            }, 25000, ">", function(){ 
+              match_label.hide();
+              finished_label.show();
+            });
+          }
+          pulse.do_animate();
+        };
+
+        as.onMatchFound = function(obj) {
+
+          console.log(obj);
+
+          var service = obj.service;
+          var programme = obj.info.schedule.now.broadcast.programme;
+          var network   = programme.ownership;
+          var brand     = programme.programme;
+          var comingup  = obj.info.schedule.next.broadcasts;
+
+
+          $("#feedback").hide().html(
+            '<div id="nownext">' +
+              '<h1><em>LIVE</em> '+network.service.title+'</h1>' +
+              '<h2>'+brand.title+'</h2>' +
+              '<p>'+programme.short_synopsis+'</p>' +
+              '<h3>Coming Up</h3>' +
+              '<ul>' +
+              '  <li><em>'+dateToHHMM(iso8601ToLocalDate(comingup[0].start))+'</em> '+comingup[0].programme.programme.title+'</li>' +
+              '  <li><em>'+dateToHHMM(iso8601ToLocalDate(comingup[1].start))+'</em> '+comingup[1].programme.programme.title+'</li>' +
+              '</ul>' +
+            '</div>'
+          ).fadeIn('slow');
+          $("content").fadeIn('slow');
+          match_label.hide(); 
+
+        };
+
+        as.onMatchNotFound = function(obj) {
+          console.log("MatchNotFound");
+          $("#feedback").hide().html('<p class="title message" id="message"><span>Sorry, we couldn\'t find a match. Refresh the page to try again.</span></p>').fadeIn('slow');
+        };
+
+        // This function isn't being called when HTTP errors are returned. Not sure why.
+        as.onMatchError = function(obj) {
+          console.log("MatchError");
+          $("#feedback").hide().html('<p class="title message" id="message"><span>Oops, an error occurred. Refresh the page to try again.</span></p>').fadeIn('slow');
+        };
+
+        as.audio_swf = sw;
+        as.audio_swf_callback = 'as';
+        as.startFlashMicRecorder();
+      });
+    };
+
+    function iso8601ToLocalDate(time) {
+      // assumes time given is UTC
+      var date = new Date();
+      var tas  = time.replace(/-/g,"/").replace(/T/g," ")
+
+      if (tas.indexOf('Z') == -1) {
+        // 2010-04-01T00:00:00+01:00
+        tas = tas.replace(/\+.*/,'');
+      } else {
+        // 2010-03-25T00:00:00Z
+        tas = tas.replace(/Z/g,'');
+      }
+
+      date.setTime( Date.parse((tas || "")) );
+      return date;
+    }
+
+    function dateToHHMM(date) {
+      // convert a Date object in to the 12:45 format
+      var h = date.getHours();
+      var m = date.getMinutes();
+      var hours = h < 10 ? '0' + h : h;
+      var mins  = m < 10 ? '0' + m : m;
+      return hours + ':' + mins;
+    }
+
+    $("#clickme").click( function(event) {
+      event.preventDefault(); 
+      init();
+    });
+
+  });
+
+</script>
+
+<link rel="stylesheet" type="text/css" media="all" href="css/reset.css" />
+<link rel="stylesheet" type="text/css" media="all" href="css/main.css" />
+</head>
+<body id="index" class="home">
+<div id="wrapper">
+
+  <div id="banner">
+    <h1><a href="/">AudioSync</a> : Livesync</h1>
+    <h2>What you're listening to now</h2>
+    <p>NOTE: This demo works in <a href="http://www.google.com/landing/chrome/beta">Google Chrome Beta (10)</a> and <a href="http://www.mozilla.com/firefox/beta/">Firefox 4</a>.</p>
+    <p>It may appear to work in Internet Explorer or Safari, but it will never find a match.</p>
+  </div>
+
+  <div id="section">
+    <div id="feedback"></div>
+
+    <div id="control">
+      <div id="content"><a href="#" id="clickme" class="clickme"><span>Click me</span></a></div>
+      <div id="paper"></div>
+      <div id="swf"><p>To view this page ensure that <a href="http://get.adobe.com/flashplayer">Adobe Flash Player</a> version 10.0.0 or greater is installed.</p></div>
+    </div>
+  </div>
+
+  <div id="footer">
+    <p>A prototype by <a href="http://www.bbc.co.uk/rd/">BBC Research &amp; Development</a></p>
+  </div>
+
+</div>
+</body>
+</html>
