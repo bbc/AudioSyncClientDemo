@@ -4,9 +4,6 @@ AudioSync browser demo
 "Welcome to our browser-based AudioSync client. It can tell you what radio
 station you're tuned to just by listening to it."
 
-This is a duplicate of the client application that's hosted at
-http://audiosync.prototype0.net/demos/livesync/
-
 It's not designed to be used 'as is' because this repository doesn't contain
 the server-side code required to run an AudioSync service. However, we think
 this will be an easier way for people to view the client code.
@@ -15,8 +12,8 @@ this will be an easier way for people to view the client code.
  /javascript/
 **************
 audio_sync.js is something we've written to act as a client to our AudioSync
-web service. To find out how that works, take a look at 
-http://audiosync.prototype0.net/api/
+web service. To find out how that works, take a look at the web service's
+/api endpoint.
 
 We've used a few 3rd party Javascript libraries:
    http://jquery.com/  -  for general cool js stuff
